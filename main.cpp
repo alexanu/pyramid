@@ -66,6 +66,10 @@ public:
   TimeType getTime() const {
     return _time;
   }
+  template<class Visitor>
+  void accept(Visitor& v) {
+    v.visit(*this);
+  }
 private:
   DoubleType _price;
   SizeType _size;
