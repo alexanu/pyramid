@@ -44,9 +44,12 @@ class Bucket {
 
 
 
-template <class DoubleType=double, class SizeType=int64_t,class TimeType=int64_t>
+template <class T>
 class Trade {
 public:
+  typedef typename T::DoubleType DoubleType;
+  typedef typename T::SizeType SizeType;
+  typedef typename T::TimeType TimeType;
   bool eligibe() const {
     return true;
   }
@@ -76,6 +79,53 @@ private:
   TimeType _time;
 };
 
+class TickTraits {
+public:
+  typedef  double DoubleType;
+  typedef unsigned int SizeType ;
+  typedef int64_t TimeType;
+};
+
+
+template <class T>
+class Quote {
+public:
+  typedef typename T::DoubleType DoubleType;
+  typedef typename T::SizeType SizeType;
+  typedef typename T::TimeType TimeType;
+  bool eligibe() const {
+    return true;
+  }
+  DoubleType bid() const {
+    return _bid;
+  }
+  DoubleType ask() const {
+    return _bid;
+  }
+  SizeType bidsz() const {
+    return _bidsz;
+  }
+  SizeType asksz() const {
+    return _asksz;
+  }
+  TimeType getTime() const {
+    return _time;
+  }
+  DoubleType spread() const {
+    return _ask - _bid;
+  }
+  template<class Visitor>
+  void accept(Visitor& v) {
+    v.visit(*this);
+  }
+private:
+  DoubleType _bid;
+  DoubleType _ask;
+  SizeType _bidsz;
+  SizeType _asksz;
+  TimeType _time;
+};
+
 
 template <class TickType,class DoubleType=double, class SizeType=int64_t>
 class TickVisitor {
@@ -83,9 +133,9 @@ class TickVisitor {
 
 
  
-template <class A,class B,class C>
-class TickVisitor<Trade<A,B,C> > {
-  typedef  Trade<A,B,C> TradeType;
+template <class TickTraits>
+class TickVisitor<Trade<TickTraits>> {
+  typedef  Trade<TickTraits> TradeType;
 public:
   void visit(const TradeType& e)
   {
@@ -102,6 +152,41 @@ private:
 };
 
 
+template <class TickTraits>
+class TickVisitor<Quote<TickTraits> > {
+  typedef  Quote<TickTraits> TickType;
+public:
+  void visit(const TickType& e)
+  {
+    if(count==0) {
+      first=&e;
+      prev=nullptr;
+    }
+    if(prev) {
+      TimeXspread =+ prev.spread() * ( e.getTime() - prev->df.getTime() );
+    }
+    
+     
+  }
+private:
+  typename TickTraits::DoubleType AvgSpread;
+  typename TickTraits::DoubleType AvgBidSize;
+  typename TickTraits::DoubleType AvgAskSize;
+  typename TickTraits::DoubleType AvgBid;
+  typename TickTraits::DoubleType AvgAsk;
+  typename TickTraits::DoubleType TimeXspread;
+  
+  TickType* first;
+  TickType* last;
+  TickType* prev;
+  int64_t count;
+};
+
+
+
+
 int main() {
+  Quote<TickTraits> x;
+  TickVisitor<Quote<TickTraits>> y;
   return 0;
 }
